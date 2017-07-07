@@ -2,43 +2,104 @@
   <head>
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
     <meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
-    <title>Using MySQL and PHP with Google Maps</title>
+    <title>Localizador de Ocorrência</title>
+    <link  rel="stylesheet" href="css/bootstrap.min.css">
     <style>
       /* Always set the map height explicitly to define the size of the div
        * element that contains the map. */
-      #map {
-        height: 100%;
-      }
-      /* Optional: Makes the sample page fill the window. */
-      html, body {
+      html, body, .container-fluid, #map {
         height: 100%;
         margin: 0;
         padding: 0;
       }
+
+      #map {
+        height: 100%;
+        width: 100%;
+        min-height: 100%;
+      }
+
+      .dropbtn {
+          background-color: #4CAF50;
+          color: white;
+          padding: 16px;
+          font-size: 16px;
+          border: none;
+          cursor: pointer;
+      }
+
+      .dropbtn:hover, .dropbtn:focus {
+          background-color: #3e8e41;
+      }
+
+      .dropdown {
+          position: relative;
+          display: inline-block;
+      }
+
+      .dropdown-content {
+          display: none;
+          position: absolute;
+          background-color: #f9f9f9;
+          min-width: 160px;
+          overflow: auto;
+          box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+          z-index: 1;
+      }
+
+      .dropdown-content a {
+          color: black;
+          padding: 12px 16px;
+          text-decoration: none;
+          display: block;
+      }
+
+      .dropdown a:hover {background-color: #f1f1f1}
+
+      .show {display:block;}
+      /* Optional: Makes the sample page fill the window. */
     </style>
   </head>
+  <body> 
+    <div class="dropdown">
+      <button onclick="myFunction()" class="dropbtn">Menu</button>
+        <div id="myDropdown" class="dropdown-content">
+          <button onclick="selectType()" class="dropbtn" style="font-size: 13px; background-color: #4CAF99; min-width: 160px">Selecionar por Tipo</button>
+          <button onclick="selectType()" class="dropbtn" style="font-size: 13px; background-color: #4CAF99; min-width: 160px">Sobre</button>
+          <button onclick="selectType()" class="dropbtn" style="font-size: 13px; background-color: #4CAF99; min-width: 160px">Contato</button>
+        </div>
+    </div>
 
-  <body>
     <div id="map"></div>
 
+
     <script>
-      var customLabel = {
-        restaurant: {
-          label: 'R'
-        },
-        bar: {
-          label: 'B'
+      function myFunction() {
+          document.getElementById("myDropdown").classList.toggle("show");
+      }
+
+      // Fechar botão se usuario clicar fora
+      window.onclick = function(event) {
+        if (!event.target.matches('.dropbtn')) {
+
+          var dropdowns = document.getElementsByClassName("dropdown-content");
+          var i;
+          for (i = 0; i < dropdowns.length; i++) {
+            var openDropdown = dropdowns[i];
+            if (openDropdown.classList.contains('show')) {
+              openDropdown.classList.remove('show');
+            }
+          }
         }
-      };
+      }
 
       var tipos = {
         0: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
         1: 'https://maps.google.com/mapfiles/ms/icons/purple-dot.png',
         2: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
-        4: 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png',
-        5: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png'
+        3: 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png',
+        4: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png'
       };
-
 
       function initMap() {
         var map = new google.maps.Map(document.getElementById('map'), {
@@ -61,15 +122,17 @@
             handleLocationError(true, infoWindow, map.getCenter());
           });
         } else {
-          // Browser doesn't support Geolocation
+          // Navegador não suporta geolocalização
           handleLocationError(false, infoWindow, map.getCenter());
         }
 
-          // Change this depending on the name of your PHP or XML file
+        // Mude o nome do arquivo conforme o seu, podendo ser .PHP ou .XML
         downloadUrl("xml_parser.php", function(data) {
           var xml = data.responseXML;
           var markers = xml.documentElement.getElementsByTagName('marker');
+          // Criação de um array, cada elemento sendo um novo objeto com dados retirados do arquivo XML.
           Array.prototype.forEach.call(markers, function(markerElem) {
+            // Setamos valores para os campos no nosso novo objeto marcador
             var logradouro = markerElem.getAttribute('LOGRADOURO');
             var bairro = markerElem.getAttribute('BAIRRO');
             var numero = markerElem.getAttribute('NUMERO');
@@ -80,21 +143,25 @@
                 parseFloat(markerElem.getAttribute('LAT')),
                 parseFloat(markerElem.getAttribute('LNG')));
 
+            // Modificamos sua info window com dados recebidos do .XML.
             var infowincontent = document.createElement('div');
             var strong = document.createElement('strong');
             strong.textContent = logradouro + " " + numero + " " + bairro
             infowincontent.appendChild(strong);
             infowincontent.appendChild(document.createElement('br'));
 
+            // Modificamos sua descrição para o que foi passado ao banco.
             var text = document.createElement('text');
             text.textContent = descricao
             infowincontent.appendChild(text);
+            // Criamos o marcador em si, com os dados da posição LNG e LAT, com animação.
             var marker = new google.maps.Marker({
               map: map,
               position: point,
               icon: tipos[tipo],
               animation: google.maps.Animation.DROP
             });
+            // Instanciamos o que fazer quando um botão for clicado, nesse caso, setamos o texto.
             marker.addListener('click', function() {
               infoWindow.setContent(infowincontent);
               infoWindow.open(map, marker);
@@ -103,14 +170,14 @@
         });
       }
 
-
       function handleLocationError(browserHasGeolocation, infoWindow, pos) {
       infoWindow.setPosition(pos);
       infoWindow.setContent(browserHasGeolocation ?
-                            'Error: The Geolocation service failed.' :
-                            'Error: Your browser doesn\'t support geolocation.');
+                            'Erro: Geolocalizão falhou.' :
+                            'Erro: Seu navegador não suporta geolocalização.');
       }
 
+      // Le o arquivo .XML, e passa para um callback, que seria a função que controla o display do mapa e criação dos marcadores
       function downloadUrl(url, callback) {
         var request = window.ActiveXObject ?
             new ActiveXObject('Microsoft.XMLHTTP') :
@@ -129,6 +196,7 @@
 
       function doNothing() {}
     </script>
+
     <script async defer
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDVa3T29wypURjgLsZFRo9YRcG9N81kHos&callback=initMap">
     </script>
